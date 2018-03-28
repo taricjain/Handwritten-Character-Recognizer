@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.util.Scanner; 
 import java.awt.image.*; 
 import java.awt.Color;
-import java.util.Arrays;
 import java.util.ArrayList;  
 public class MnistData { 
 
