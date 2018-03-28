@@ -75,7 +75,8 @@ class Network {
    	}
 
 	// Stochastic Gradient Descent method using backpropagation
-   	public  void SGD(MnistData trainingData, int epochs, int miniBatchSize, Double eta, MnistData testData) {
+	public  void SGD(MnistData trainingData, int epochs, 
+		int miniBatchSize, Double eta, MnistData testData) {
 		for (int j= 0; j < epochs; j++) {
       		// randomize the trainingData before picking a minibatch
          	Collections.shuffle(trainingData.images);
@@ -89,7 +90,8 @@ class Network {
             	updateMiniBatch(thisMiniBatch, eta);
         	}
         	if (testData != null) {
-            	System.out.println("Epoch " + j + ": " + evaluate(testData) + " / " + testData.images.size());
+				System.out.println("Epoch " + j + ": " + 
+					evaluate(testData) + " / " + testData.images.size());
          	} 
          	else {
            		System.out.println("Epoch " + j + " complete.");
@@ -148,7 +150,8 @@ class Network {
 		//updating biases
 		for (int i = 0; i < biases.size(); i++) {
 			for (int j = 0; j < biases.get(i).length; j++) {
-				biases.get(i)[j] = biases.get(i)[j] - ((eta/miniBatch.size()) * nabla_b.get(i)[j]);
+				biases.get(i)[j] = biases.get(i)[j] - 
+					((eta/miniBatch.size()) * nabla_b.get(i)[j]);
 			}
 		}
 	
@@ -156,27 +159,31 @@ class Network {
 		for (int n = 0; n < weights.size(); n++) { 
 			for (int j = 0; j < weights.get(n).length; j++) {
 				for(int k = 0; k < weights.get(n)[j].length; k++) {
-					weights.get(n)[j][k] = weights.get(n)[j][k] - ((eta/miniBatch.size()) * nabla_w.get(n)[j][k]);
+					weights.get(n)[j][k] = weights.get(n)[j][k] - 
+						((eta/miniBatch.size()) * nabla_w.get(n)[j][k]);
 				}
 			}
 		}
    	}
 	
-	public void backpropagation(CharImgType data, ArrayList<Double[]> biases, ArrayList<Double[][]> weights) {
-		//FEED FORWARD
-   		//would contain all the 'z' values for each layer
+	public void backpropagation(
+		CharImgType data, ArrayList<Double[]> biases, ArrayList<Double[][]> weights) {
+		
+		// FEED FORWARD
+		// contains all z values
     	ArrayList<Double> zs = new ArrayList<Double>();
-   		//would contain all the activation values for each layer
-      	ArrayList<Double[]> activations = new ArrayList<Double[]>();
-   		//converting primitive int to wrapper Double
+		   
+		// contains all activation values
+		ArrayList<Double[]> activations = new ArrayList<Double[]>();
+		   
+		// converting primitive int to wrapper Double
       	Double[] input = new Double[data.image.length];
       	for (int i = 0; i < input.length; i++) {
-      		//activation will be used as the inputLayer i.e. output from the first layer
          	input[i] = new Double(data.image[i]);
       	}
       	activations.add(input);
    
-      	for (int i = 1; i < numLayers; i++) {
+		for (int i = 1; i < numLayers; i++) {
          	Double z = new Double(0.0);
          	Double[] thisLayerActivation = new Double[sizes.get(i)];
          	for (int j = 0; j < sizes.get(i); j++) {
@@ -193,17 +200,17 @@ class Network {
    	
    		//UPDATE: FORWARD PASS DOES NOT WORK PROPERLY.
 		
-		   //BACKWARD PASS
+		//BACKWARD PASS
 		// delta = self.cost_derivative(activations[-1], y) * sigmoid_prime(zs[-1])
 		// nabla_b[-1] = delta
 		// nabla_w[-1] = np.dot(delta, activations[-2].transpose())
 
-		// for l in xrange(2, self.num_layers):
-		// 	z = zs[-l]
-		// 	sp = sigmoid_prime(z)
-		// 	delta = np.dot(self.weights[-l+1].transpose(), delta) * sp
-		// 	nabla_b[-l] = delta
-		// 	nabla_w[-l] = np.dot(delta, activations[-l-1].transpose())  
+		//	for l in xrange(2, self.num_layers):
+		//		z = zs[-l]
+		// 		sp = sigmoid_prime(z)
+		// 		delta = np.dot(self.weights[-l+1].transpose(), delta) * sp
+		// 		nabla_b[-l] = delta
+		// 		nabla_w[-l] = np.dot(delta, activations[-l-1].transpose())  
 		
 		
    	}
@@ -212,6 +219,17 @@ class Network {
 		return (0); 
 	}
 
-	//Loss function L(predicted y, desired y) = - ( ( desired y * log(predicted y) ) + (1 - desired y) * (log(1 - predicted y)) )
-	//Cost function J(weights, biases) = - (1/m) * (∑ L(y, ˆy))
+	public void costDerivative() {}
+	
+	public Double sigmoidPrime(Double z) {
+		//calculate the sigmoid
+		Double sigmoid = (1.0)/((1.0) + Math.exp(-(z)));
+		//return prime
+		return (sigmoid * (1 - sigmoid));
+	}
+	
+	// Cost function J(w, b) = - (1/2n) * (∑ ||y(x)-a||^2)
+	// where y(x) is the output layer for each training input 'x'
+	// also, where 'a' is the activation for the last layer.
+	// 'n' is the size of the training data
 }
