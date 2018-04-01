@@ -166,13 +166,34 @@ class Network {
 		}
    	}
 	
-	public void backpropagation(
-		CharImgType data, ArrayList<Double[]> biases, ArrayList<Double[][]> weights) {
+	public void backpropagation(CharImgType data, ArrayList<Double[]> biases,
+		ArrayList<Double[][]> weights) {
 		
+		//CLONING biases and weights
+		ArrayList<Double[]> nabla_b = new ArrayList<Double[]>(); 
+		ArrayList<Double[][]> nabla_w = new ArrayList<Double[][]>();
+		for (int i = 1; i < numLayers; i++) {
+			// generate biases for each layer except 0
+			Double[] thisLayersBiases = new Double[sizes.get(i)];
+			for (int j = 0; j < sizes.get(i); j++) {
+				thisLayersBiases[j] = (Double) 0.0;
+			}  
+			nabla_b.add(thisLayersBiases);
+		
+			// generate weights for this layer, matrix based on size of previous layer
+			Double[][] thisLayersWeights = new Double[sizes.get(i)][sizes.get(i-1)];
+			for (int j = 0; j < sizes.get(i); j++) {
+				for(int k = 0; k < sizes.get(i-1); k++) {
+					thisLayersWeights[j][k] = (Double) 0.0;
+				}
+			}
+			nabla_w.add(thisLayersWeights);
+		}
+
 		// FEED FORWARD
 		// contains all z values
     	ArrayList<Double> zs = new ArrayList<Double>();
-		   
+
 		// contains all activation values
 		ArrayList<Double[]> activations = new ArrayList<Double[]>();
 		   
@@ -195,14 +216,30 @@ class Network {
             	thisLayerActivation[j] = (1.0)/((1.0) + Math.exp(-(z)));
          	}
          	zs.add(z);
-         	activations.add(thisLayerActivation);
+        	activations.add(thisLayerActivation);
       	}
    	
    		//UPDATE: FORWARD PASS DOES NOT WORK PROPERLY.
 		
 		//BACKWARD PASS
-		// delta = self.cost_derivative(activations[-1], y) * sigmoid_prime(zs[-1])
-		// nabla_b[-1] = delta
+		Double[] lastActivation = activations.get(activations.size() - 1);
+		Double sigmoidLastZ = sigmoidPrime(zs.get(zs.size() - 1));
+
+		Double[] desiredOutputLayer = createDesiredOutputLayer(data);
+		Double[] delta = new Double[desiredOutputLayer.length];
+		Double[] cost_derivative = costDerivative(lastActivation, desiredOutputLayer);
+		
+		for (int i = 0; i < delta.length; i++) {
+			delta[i] = cost_derivative[i] * sigmoidLastZ;
+		}
+
+		for (int i = 0; i < delta.length; i++) {
+			nabla_b.get(nabla_b.size() - 1)[i] = delta[i]; 
+		}
+
+		// how do i make the rest happen
+		// what is the loop going through, is it just running once.
+
 		// nabla_w[-1] = np.dot(delta, activations[-2].transpose())
 
 		//	for l in xrange(2, self.num_layers):
@@ -212,20 +249,35 @@ class Network {
 		// 		nabla_b[-l] = delta
 		// 		nabla_w[-l] = np.dot(delta, activations[-l-1].transpose())  
 		
-		
    	}
 
    	public int evaluate(MnistData testData) { 
 		return (0); 
 	}
 
-	public void costDerivative() {}
+	public Double[] costDerivative(Double[] networkOutput, Double[] desiredOutput) {
+		Double[] derivative = new Double[networkOutput.length];
+		for (int i = 0; i < networkOutput.length; i++) {
+			derivative[i] = networkOutput[i] - desiredOutput[i];
+		}
+		return derivative;
+	}
 	
 	public Double sigmoidPrime(Double z) {
 		//calculate the sigmoid
 		Double sigmoid = (1.0)/((1.0) + Math.exp(-(z)));
 		//return prime
 		return (sigmoid * (1 - sigmoid));
+	}
+
+	public Double[] createDesiredOutputLayer(CharImgType data) {
+		// 10 is the number of neurons in the output layer.
+		int numOutputs = 10;
+		Double[] y = new Double[numOutputs];
+		for (int i = 0; i < y.length; i++) {
+			y[i] = (i == data.label) ? new Double(1) : new Double(0);
+		}
+		return y;
 	}
 	
 	// Cost function J(w, b) = - (1/2n) * (∑ ||y(x)-a||^2)
