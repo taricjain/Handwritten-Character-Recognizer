@@ -218,37 +218,74 @@ class Network {
          	zs.add(z);
         	activations.add(thisLayerActivation);
       	}
-   	
    		//UPDATE: FORWARD PASS DOES NOT WORK PROPERLY.
 		
 		//BACKWARD PASS
 		Double[] lastActivation = activations.get(activations.size() - 1);
 		Double sigmoidLastZ = sigmoidPrime(zs.get(zs.size() - 1));
 
-		Double[] desiredOutputLayer = createDesiredOutputLayer(data);
+		Double[] desiredOutputLayer = createOutputLayer(data);
 		Double[] delta = new Double[desiredOutputLayer.length];
 		Double[] cost_derivative = costDerivative(lastActivation, desiredOutputLayer);
 		
 		for (int i = 0; i < delta.length; i++) {
 			delta[i] = cost_derivative[i] * sigmoidLastZ;
+			nabla_b.get(nabla_b.size() - 1)[i] = delta[i];
 		}
-
-		for (int i = 0; i < delta.length; i++) {
-			nabla_b.get(nabla_b.size() - 1)[i] = delta[i]; 
-		}
-
-		// how do i make the rest happen
-		// what is the loop going through, is it just running once.
-
-		// nabla_w[-1] = np.dot(delta, activations[-2].transpose())
-
-		//	for l in xrange(2, self.num_layers):
-		//		z = zs[-l]
-		// 		sp = sigmoid_prime(z)
-		// 		delta = np.dot(self.weights[-l+1].transpose(), delta) * sp
-		// 		nabla_b[-l] = delta
-		// 		nabla_w[-l] = np.dot(delta, activations[-l-1].transpose())  
 		
+		/** 
+		 * instead of actually transforming the second layer of activations
+		 * I had each value of delta multiplied with the entire second layer
+		 * of activations and then put that back into nabla_w.
+		*/
+		ArrayList<Double> dots = new ArrayList<Double>();
+		for (int i = 0; i < delta.length; i++) {
+			Double dot = 0.0;
+			for (int j = 0; j < activations.get(activations.size() - 1).length; j++) {
+				dot += delta[i] * activations.get(activations.size() - 1)[j];
+			}
+			dots.add(dot);
+		}
+		// placing it back into the nabla_w
+		for (int i = 0; i < nabla_w.size(); i++) {
+			for (int j = 0; j < nabla_w.get(i).length; j++) {
+				for (int k = 0; k < nabla_w.get(i)[j].length; k++) {
+					nabla_w.get(i)[j][k] = dots.get(i);
+				}
+			}
+		}
+
+		Double z;
+		Double sp;
+		for (int i = numLayers; i >= 2; i--) {
+			z = zs.get(i);
+			sp = sigmoidPrime(z);
+			for (int d = 0; d < delta.length; d++) {
+				Double dot = 0.0;
+				for (int j = 0; j < weights.get(i).length; j++) {
+					for (int k = 0; k < weights.get(i)[j].length; k++) {
+						dot += delta[d] * weights.get(i)[j][k];
+					}
+				}
+				dot *= sp;
+				delta[d] = dot;
+			}
+			for (int j = 0; j < nabla_b.get(i).length; j++) {
+				nabla_b.get(i)[j] = delta[j];
+			}
+			for (int d = 0; d < delta.length; d++) {
+				Double dot = 0.0;
+				for (int j = 0; j < activations.get(i-1).length; j++) {
+					dot += delta[d] * activations.get(i-1)[j];
+				}
+
+				for (int j = 0; j < weights.get(i).length; j++) {
+					for (int k = 0; k < weights.get(i)[j].length; k++) {
+						nabla_w.get(i)[j][k] = dot;
+					}
+				}
+			}
+		}
    	}
 
    	public int evaluate(MnistData testData) { 
@@ -270,7 +307,7 @@ class Network {
 		return (sigmoid * (1 - sigmoid));
 	}
 
-	public Double[] createDesiredOutputLayer(CharImgType data) {
+	public Double[] createOutputLayer(CharImgType data) {
 		// 10 is the number of neurons in the output layer.
 		int numOutputs = 10;
 		Double[] y = new Double[numOutputs];
@@ -279,9 +316,4 @@ class Network {
 		}
 		return y;
 	}
-	
-	// Cost function J(w, b) = - (1/2n) * (∑ ||y(x)-a||^2)
-	// where y(x) is the output layer for each training input 'x'
-	// also, where 'a' is the activation for the last layer.
-	// 'n' is the size of the training data
 }
