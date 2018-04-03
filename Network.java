@@ -85,7 +85,7 @@ class Network {
          	for (int k  = 0; k < trainingData.images.size(); k += miniBatchSize) {
             	for (int i = 0; i < miniBatchSize; i++) {
               		CharImgType thisCharImg = trainingData.images.get(k+i);
-            		thisMiniBatch.add(thisCharImg);
+					thisMiniBatch.add(thisCharImg);
             	}
             	updateMiniBatch(thisMiniBatch, eta);
         	}
@@ -114,7 +114,7 @@ class Network {
          	nabla_b.add(thisLayersBiases);
       	
       		// generate weights for this layer, matrix based on size of previous layer
-         	Double[][] thisLayersWeights = new Double[sizes.get(i)][sizes.get(i-1)];
+			Double[][] thisLayersWeights = new Double[sizes.get(i)][sizes.get(i-1)];
          	for (int j = 0; j < sizes.get(i); j++) {
             	for(int k = 0; k < sizes.get(i-1); k++) {
                		thisLayersWeights[j][k] = (Double) 0.0;
@@ -166,30 +166,8 @@ class Network {
 		}
    	}
 	
-	public void backpropagation(CharImgType data, ArrayList<Double[]> biases,
-		ArrayList<Double[][]> weights) {
-		
-		//CLONING biases and weights
-		ArrayList<Double[]> nabla_b = new ArrayList<Double[]>(); 
-		ArrayList<Double[][]> nabla_w = new ArrayList<Double[][]>();
-		for (int i = 1; i < numLayers; i++) {
-			// generate biases for each layer except 0
-			Double[] thisLayersBiases = new Double[sizes.get(i)];
-			for (int j = 0; j < sizes.get(i); j++) {
-				thisLayersBiases[j] = (Double) 0.0;
-			}  
-			nabla_b.add(thisLayersBiases);
-		
-			// generate weights for this layer, matrix based on size of previous layer
-			Double[][] thisLayersWeights = new Double[sizes.get(i)][sizes.get(i-1)];
-			for (int j = 0; j < sizes.get(i); j++) {
-				for(int k = 0; k < sizes.get(i-1); k++) {
-					thisLayersWeights[j][k] = (Double) 0.0;
-				}
-			}
-			nabla_w.add(thisLayersWeights);
-		}
-
+	public void backpropagation(CharImgType data, ArrayList<Double[]> delta_b,
+		ArrayList<Double[][]> delta_w) {
 		// FEED FORWARD
 		// contains all z values
     	ArrayList<Double> zs = new ArrayList<Double>();
@@ -230,7 +208,7 @@ class Network {
 		
 		for (int i = 0; i < delta.length; i++) {
 			delta[i] = cost_derivative[i] * sigmoidLastZ;
-			nabla_b.get(nabla_b.size() - 1)[i] = delta[i];
+			delta_b.get(delta_b.size() - 1)[i] = delta[i];
 		}
 		
 		/** 
@@ -247,10 +225,10 @@ class Network {
 			dots.add(dot);
 		}
 		// placing it back into the nabla_w
-		for (int i = 0; i < nabla_w.size(); i++) {
-			for (int j = 0; j < nabla_w.get(i).length; j++) {
-				for (int k = 0; k < nabla_w.get(i)[j].length; k++) {
-					nabla_w.get(i)[j][k] = dots.get(i);
+		for (int i = 0; i < delta_w.size(); i++) {
+			for (int j = 0; j < delta_w.get(i).length; j++) {
+				for (int k = 0; k < delta_w.get(i)[j].length; k++) {
+					delta_w.get(i)[j][k] = dots.get(i);
 				}
 			}
 		}
@@ -270,8 +248,8 @@ class Network {
 				dot *= sp;
 				delta[d] = dot;
 			}
-			for (int j = 0; j < nabla_b.get(i).length; j++) {
-				nabla_b.get(i)[j] = delta[j];
+			for (int j = 0; j < delta_b.get(i).length; j++) {
+				delta_b.get(i)[j] = delta[j];
 			}
 			for (int d = 0; d < delta.length; d++) {
 				Double dot = 0.0;
@@ -281,7 +259,7 @@ class Network {
 
 				for (int j = 0; j < weights.get(i).length; j++) {
 					for (int k = 0; k < weights.get(i)[j].length; k++) {
-						nabla_w.get(i)[j][k] = dot;
+						delta_w.get(i)[j][k] = dot;
 					}
 				}
 			}
