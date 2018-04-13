@@ -1,10 +1,10 @@
 install:
 	javac -g CharacterImage.java
-	javac -g CharacterRecognizerExample.java
+	javac -g CharacterRecognizer.java
 	javac -g CharImgType.java
 	javac -g MnistData.java
 	javac -g Network.java
-	java CharacterRecognizerExample
+	java CharacterRecognizer
 clean:
 	rm *.class
 	

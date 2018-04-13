@@ -1,7 +1,8 @@
 import java.util.ArrayList;
 import java.io.IOException;
+import javax.sound.midi.SysexMessage;
 
-public class CharacterRecognizerExample  {
+public class CharacterRecognizer  {
     public static void main(String[] args) throws IOException {
    	    // Read all the training images
    
@@ -19,7 +20,7 @@ public class CharacterRecognizerExample  {
    	    // network, layer 0 = the inputs
    
         ArrayList<Integer> sizes = new ArrayList<Integer>();
-        sizes.add(trainingData.height*trainingData.width);
+        sizes.add(trainingData.height * trainingData.width);
         sizes.add(numHidden);
         sizes.add(numOutput);
    	
@@ -33,6 +34,9 @@ public class CharacterRecognizerExample  {
         int epochs = 30; // number of epochs
         int miniBatchSize = 10; // size of mini batches
         Double eta = 3.0; // learning rate
-        net.SGD(trainingData, epochs, miniBatchSize, eta, testData);
+        Integer[] efficieny = net.SGD(trainingData, epochs, miniBatchSize, eta, testData);
+        for (int i = 0; i < efficieny.length; i++) {
+            System.out.println(efficieny[i]);
+        }
    }
 }

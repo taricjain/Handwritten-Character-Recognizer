@@ -14,7 +14,7 @@ class Network {
 
 	// constructor, takes a vector of number of nodes in each layer,
 	// layer 0 = input layer, layer sizes.size-1 is the output layer
-   	public  Network(ArrayList<Integer> argSizes) {
+   	public Network(ArrayList<Integer> argSizes) {
     	Random rng = new Random();  // random number generator
    		// copy in some globals
       	sizes = argSizes;
@@ -24,7 +24,7 @@ class Network {
       	weights = new ArrayList<Double[][]>();
    
    		// generate initial Gaussianly distributed weights and biases for
-   		// layers 1...numLayers-1 (no weights or biases for layer 0)
+   		// layers 1...(numLayers-1) (no weights or biases for layer 0)
       	for (int i = 1; i < numLayers; i++) {
       		// generate biases for each layer except 0
          	Double[] thisLayersBiases = new Double[sizes.get(i)];
@@ -48,64 +48,53 @@ class Network {
 		// list of outputs from each layer, 0 to numLayers
    		// each output is an array of doubles as long as the number of nodes in that layer
       	ArrayList<Double[]> layerOutputs = new ArrayList<Double[]>();
-      	if (input.length != sizes.get(0)) {
-         	System.out.println("feedForward: wrong input size");
-         	System.exit(-1);
-      	}
       	layerOutputs.add(input); // layer 0 is the inputs
-   	
-   		// calculate each layer of outputs
-      	for (int n = 1; n < numLayers; n++) {
-        	Double[] thisLayerOutput = new Double[sizes.get(n)];
-      		
-         	for(int i = 1; i < sizes.get(n); i++) {
-            	Double dot = 0.0;
-         	
-         		// multiply weights by inputs from previous layer (this is a dot product)
-            	for(int j = 1; j < sizes.get(n-1); j++) {
-               		dot += weights.get(n-1)[i][j] * (layerOutputs.get(n-1)[j]);
-            	}
-         		// compute the sigmoid
-            	thisLayerOutput[i] = (1.0) / (1.0 + Math.exp(-(dot + (biases.get(n-1))[i])));
-         	}
-      		// add the layer to the list of outputs
-         	layerOutputs.add(thisLayerOutput);
-      	}
+	
+		// loop for layers
+		for (int i = 1; i < numLayers; i++) {
+			Double[] z = new Double[sizes.get(i)];
+			Double[] thisLayerActivation = new Double[sizes.get(i)];
+		   	// loop for neurons 
+		   	for (int j = 0; j < sizes.get(i); j++) {
+				Double dot = new Double(0.0);
+			   	// loop for calculating dot product.
+			   	for (int k = 0; k < sizes.get(i - 1); k++) {
+					dot += weights.get(i-1)[j][k] * layerOutputs.get(i-1)[k];
+			   	}
+			   	// calculating activation using sigmoid function [0,1]
+			   	z[j] = dot + biases.get(i-1)[j];
+				thisLayerActivation[j] = (1.0)/((1.0) + Math.exp(-(z[j])));
+		   	}
+		   	layerOutputs.add(thisLayerActivation);
+		}
    		// the last layer of outputs is the output of the network
-      	return(layerOutputs.get(numLayers-1));
+      	return(layerOutputs.get(layerOutputs.size() - 1));
    	}
 
 	// Stochastic Gradient Descent method using backpropagation
-	public  void SGD(MnistData trainingData, int epochs, 
+	public Integer[] SGD(MnistData trainingData, int epochs, 
 		int miniBatchSize, Double eta, MnistData testData) {
-		for (int j= 0; j < epochs; j++) {
+		Integer[] score = new Integer[epochs];
+			for (int j = 0; j < epochs; j++) {
       		// randomize the trainingData before picking a minibatch
          	Collections.shuffle(trainingData.images);
-      
-         	ArrayList<CharImgType> thisMiniBatch = new ArrayList<CharImgType>();
-         	for (int k  = 0; k < trainingData.images.size(); k += miniBatchSize) {
-            	for (int i = 0; i < miniBatchSize; i++) {
+			System.out.println("Epoch: " + (j + 1));
+         	for (int k = 0; k < trainingData.images.size(); k += miniBatchSize) {
+            	ArrayList<CharImgType> thisMiniBatch = new ArrayList<CharImgType>();
+                for (int i = 0; i < miniBatchSize; i++) {
               		CharImgType thisCharImg = trainingData.images.get(k+i);
 					thisMiniBatch.add(thisCharImg);
 				}
 				// update weights and biases with this mini batch
             	updateMiniBatch(thisMiniBatch, eta);
-                System.out.println("update:" + k);
         	}
-        	if (testData != null) {
-				System.out.println("Epoch " + j + ": " + 
-					evaluate(testData) + " / " + testData.images.size());
-         	} 
-         	else {
-           		System.out.println("Epoch " + j + " complete.");
-         	}
-      	}
+            score[j] = evaluate(testData);
+		}
+		return score;  
 	}
-	
-	//Applying backpropagation() to mini batches to update the weights and biases
-	@SuppressWarnings("unchecked")   
+	  
    	public void updateMiniBatch(ArrayList<CharImgType> miniBatch, Double eta) {
-   		//CLONING biases and weights
+   		// cloning biases and weights
       	ArrayList<Double[]> nabla_b = new ArrayList<Double[]>(); 
       	ArrayList<Double[][]> nabla_w = new ArrayList<Double[][]>();
       	for (int i = 1; i < numLayers; i++) {
@@ -128,40 +117,16 @@ class Network {
          	nabla_w.add(thisLayersWeights);
       	}
    	
-   		//UPDATING NABLA VALUES
+   		// running backprop on every minibatch member
       	for (int i = 0; i < miniBatch.size(); i++) {
-			// cloning nabla_w and nabla_b to be sent in for backprop
-			ArrayList<Double[]> delta_b = (ArrayList<Double[]>) nabla_b.clone();
-         	ArrayList<Double[][]> delta_w = (ArrayList<Double[][]>) nabla_w.clone();
-			/** 
-			 * backprop being applied to everyone image in the minibatch
-			 * now, send delta_b and delta_w to calculate the derivatives
-			 * */  
-			 backpropagation(miniBatch.get(i), delta_b, delta_w);
-      
-      		//updating nabla_b
-         	for (int j = 0; j < nabla_b.size(); j++) {
-            	for (int k = 0; k < nabla_b.get(j).length; k++) {
-            	   	nabla_b.get(j)[k] += delta_b.get(j)[k];
-            	}
-         	}
-      
-      		//updating nabla_w
-			for (int n = 0; n < nabla_w.size(); n++) { 
-				for (int j = 0; j < nabla_w.get(n).length; j++) {
-					for(int k = 0; k < nabla_w.get(n)[j].length; k++) {
-						nabla_w.get(n)[j][k] += delta_w.get(n)[j][k];
-					}
-	   			}
-			}
+			backpropagation(miniBatch.get(i), nabla_b, nabla_w);
      	}
    
-   		//UPDATING WEIGHTS AND BIASES FOR NN
 		//updating biases
 		for (int i = 0; i < biases.size(); i++) {
 			for (int j = 0; j < biases.get(i).length; j++) {
-				biases.get(i)[j] = biases.get(i)[j] - 
-					((eta/miniBatch.size()) * nabla_b.get(i)[j]);
+				biases.get(i)[j] -= ((eta/miniBatch.size()) 
+					* nabla_b.get(i)[j]);
 			}
 		}
 	
@@ -169,8 +134,8 @@ class Network {
 		for (int n = 0; n < weights.size(); n++) { 
 			for (int j = 0; j < weights.get(n).length; j++) {
 				for(int k = 0; k < weights.get(n)[j].length; k++) {
-					weights.get(n)[j][k] = weights.get(n)[j][k] - 
-						((eta/miniBatch.size()) * nabla_w.get(n)[j][k]);
+					weights.get(n)[j][k] -= ((eta/miniBatch.size()) 
+						* nabla_w.get(n)[j][k]);
 				}
 			}
 		}
@@ -205,7 +170,9 @@ class Network {
 				Double dot = new Double(0.0);
 				// loop for calculating dot product.
 				for (int k = 0; k < sizes.get(i - 1); k++) {
-                    dot += weights.get(i-1)[j][k] * activations.get(i-1)[k];
+					Double w = weights.get(i-1)[j][k];
+					Double a = activations.get(i-1)[k];
+					dot += w * a;
 				}
 				// calculating activation using sigmoid function [-1,1]
 				z[j] = dot + biases.get(i-1)[j];
@@ -215,7 +182,6 @@ class Network {
          	zs.add(z);
         	activations.add(thisLayerActivation);
       	}
-
 		/**
 		 * Feed Backward
 		*/
@@ -226,25 +192,23 @@ class Network {
 		 * then do the same for the hidden layer. But we have to use a step
 		 * by step process to accomplish this.
 		*/
+
 		// last activation layer
 		Double[] lastActivation = activations.get(activations.size() - 1);
 		// prime of the last z layer
 		Double[] lastZPrime = sigmoidPrime(zs.get(zs.size() - 1));
-
 		// creating desired output layer to get derivative
 		Double[] desiredOutputLayer = createOutputLayer(data);
-		
 		// calculate derivative
 		Double[] cost_derivative = costDerivative(lastActivation, desiredOutputLayer);
 		
-		Double[] delta = new Double[desiredOutputLayer.length];
+		ArrayList<Double> delta = new ArrayList<Double>();
 		// calculating delta and save in delta_b
 		// working on output layer now
-		for (int i = 0; i < delta.length; i++) {
-			delta[i] = cost_derivative[i] * lastZPrime[i];
-			delta_b.get(delta_b.size() - 1)[i] = delta[i];
+		for (int i = 0; i < desiredOutputLayer.length; i++) {
+			delta.add(cost_derivative[i] * lastZPrime[i]);
+			delta_b.get(delta_b.size() - 1)[i] = delta.get(i);
 		}
-		
 		/** 
 		 * Instead of actually transforming the second layer of activations
 		 * to obtain the transpose. I tried having each value of delta 
@@ -253,10 +217,12 @@ class Network {
 		*/
 		Double[] secondLayerActivation = activations.get(activations.size() - 2);
 		ArrayList<Double> dots = new ArrayList<Double>();
-		for (int i = 0; i < delta.length; i++) {
+		for (int cols = 0; cols < delta.size(); cols++) {
 			Double dot = 0.0;
-			for (int j = 0; j < secondLayerActivation.length; j++) {
-				dot = delta[i] * secondLayerActivation[j];
+			for (int rows = 0; rows < secondLayerActivation.length; rows++) {
+				Double d = delta.get(cols);
+				Double s = secondLayerActivation[rows];
+				dot = d * s;
 				dots.add(dot);
 			}
 		}
@@ -270,73 +236,74 @@ class Network {
 			}
 		}
 
-		Double[] z;
-		Double[] sigPrime;
+		//Double[] z;
+		Double[] sigPrimeHidden;
 		// working on hidden layer now.
 		for (int n = numLayers - 1; n >= 2; n--) {
 			// z for the hidden layer
-			z = zs.get(n-2);
-			sigPrime = sigmoidPrime(z);
+			sigPrimeHidden = sigmoidPrime(zs.get(n-2));
 			/**
 			 * to achieve the same effect as the transpose of the output layer
 			 * of the weights, we will run this nested loop for 15 (outer)
 			 * and 10 (inner) times.
 			*/
-			ArrayList<Double> delta_List = new ArrayList<Double>();
+
 			for (int cols = 0; cols < sizes.get(n-1); cols++) {
 				Double dot = 0.0;
 				for (int rows = 0; rows < sizes.get(n); rows++) {
-					dot += weights.get(n - 1)[rows][cols] * delta[rows] * sigPrime[rows];
+					Double w = weights.get(n - 1)[rows][cols];
+                    Double d = delta.get(rows);
+                    dot += w * d;
 				}
-				delta_List.add(dot);
+				//updating the values of delta
+				dot *= sigPrimeHidden[cols];
+				// this makes sure the dot product ends up in the right spot
+                if (cols <= 9) { delta.set(cols, dot); }
+				else { delta.add(dot); }
 			}
-
-			// saving all values in delta_b
-			for (int i = 0; i < delta_b.get(n-2).length; i++) {
-				delta_b.get(n-2)[i] = delta_List.get(i);
+			// saving delta in delta_b
+			for (int j = 0; j < delta_b.get(n-1).length; j++) {
+				delta_b.get(n-1)[j] = delta.get(j);
 			}
-			
-			// get the tranpose of activations(0) [784] dotted by the new delta_list [15]
+			// get the tranpose of activations(0) [784] dotted by the new delta [15]
 			// and save in weights[0] [15x784]
-			ArrayList<Double> delta_w_list = new ArrayList<Double>();
-			for (int i = 0; i < delta.length; i++) {
+			ArrayList<Double> delta_w_temp = new ArrayList<Double>();
+			for (int i = 0; i < delta.size(); i++) {
 				Double dot = 0.0;
 				for (int j = 0; j < activations.get(n - 2).length; j++) {
-					dot = delta_List.get(i) * activations.get(n - 2)[j];
-					delta_w_list.add(dot);
+					// each delta is multiplied with the entire activations layer
+					// producing a [15*784] matrix
+					dot = delta.get(i) * activations.get(n - 2)[j];
+					delta_w_temp.add(dot);
 				}
 			}
 
 			for (int i = 0; i < delta_w.get(n - 2).length; i++) {
 				for (int j = 0; j < delta_w.get(n - 2)[i].length; j++) {
-					delta_w.get(n - 2)[i][j] = delta_w_list.get(j);
+					delta_w.get(n - 2)[i][j] = delta_w_temp.get(j);
 				}
 			}
 		}
    	}
 
-   	public int evaluate(MnistData testData) { 
-		int score = 0;
-		for (int i = 0; i < testData.numImages; i++) {
+   	public Integer evaluate(MnistData testData) { 
+		Integer score = 0;
+		for (int i = 0; i < testData.images.size(); i++) {
 			CharImgType myImage = testData.images.get(i);
 			Double prediction = new Double(myImage.label);
-			
 			// get the network output for this image.
-			Double[] networkOutput = feedForward
-				(primitiveToWrapperDouble(myImage.image));
-			
+			Double[] networkOutput = feedForward(primitiveToWrapperDouble(myImage.image));
 			// figure out which neuron was fired by
 			// finding the largest activation value in the array.
 			Double max = networkOutput[0];
 			int index = 0;
 			for (int j = 1; j < networkOutput.length; j++) {
 				if (networkOutput[j] > max) {
-					index = j;
+					max = networkOutput[j];
+                    index = j;
 				}
 			}
-
-			// if the prediction is equal to "index" we have a win.
-			// if not then, dont add anything to score and keep going.
+			// if the prediction is equal to "index" we have a win
 			score = (prediction == index) ? score + 1 : score;
 		}
 		return score; 
@@ -355,9 +322,8 @@ class Network {
 		//calculate the sigmoid
 		for (int i = 0; i < z.length; i++) {
 			Double sigmoid = (1.0)/((1.0) + Math.exp(-(z[i])));
-			prime[i] = sigmoid;
+			prime[i] = sigmoid * (1.0 - sigmoid);
 		}
-		//return prime
 		return prime;
 	}
 
